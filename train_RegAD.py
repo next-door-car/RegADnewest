@@ -25,18 +25,18 @@ device = torch.device('cuda' if use_cuda else 'cpu')
 def main():
     parser = argparse.ArgumentParser(description='Registration based Few-Shot Anomaly Detection')
     parser.add_argument('--obj', type=str, 
-                                 default='bottle')
+                                 default='bottle') 
     parser.add_argument('--data_type', type=str, 
-                                       default='mvtec')
+                                       default='mvtec') #数据集
     parser.add_argument('--data_path', type=str, 
-                                       default='./MVTec/')
+                                       default='./MVTec/') #数据集路径
     parser.add_argument('--epochs', type=int, 
                                     default=50, 
-                                    help='maximum training epochs')
+                                    help='maximum training epochs') #最大训练轮数
     parser.add_argument('--batch_size', type=int, 
-                                        default=32)
+                                        default=32) #batch_size
     parser.add_argument('--img_size', type=int, 
-                                      default=224)
+                                      default=224) #图像大小
     parser.add_argument('--lr', type=float, 
                                 default=0.0001, 
                                 help='learning rate of others in SGD')

@@ -55,7 +55,7 @@ def main():
 
     # load models
     CKPT_name = f'logs_pcb/rotation_scale/2/PCB2/PCB2_2_rotation_scale_model.pt'
-    model_CKPT = torch.load(CKPT_name)
+    model_CKPT = torch.load(CKPT_name, map_location=device)
     STN.load_state_dict(model_CKPT['STN'])
     ENC.load_state_dict(model_CKPT['ENC'])
     PRED.load_state_dict(model_CKPT['PRED'])

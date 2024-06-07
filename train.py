@@ -20,43 +20,44 @@ from collections import OrderedDict
 import warnings
 warnings.filterwarnings("ignore")
 use_cuda = torch.cuda.is_available()
-device = torch.device('cuda:1' if use_cuda else 'cpu')
+# device = torch.device('cpu')
+device = torch.device('cuda:0' if use_cuda else 'cpu')
 
 def main():
     parser = argparse.ArgumentParser(description='Registration based Few-Shot Anomaly Detection')
     parser.add_argument('--mode', type=str, 
                                   default='train')
     parser.add_argument('--obj', type=str, 
-                                 default='PCB2')
+                                 default='PCB2') #类别
     parser.add_argument('--data_path', type=str, 
-                                       default='./PCB')
+                                       default='./PCB') #数据集路径
     parser.add_argument('--epochs', type=int, 
                                     default=100, # 600 
-                                    help='maximum training epochs')
+                                    help='maximum training epochs') #最大训练轮数
     parser.add_argument('--batch_size', type=int, 
-                                        default=4) # 分批
+                                        default=4) # 分批 #batch_size
     parser.add_argument('--img_size', type=int, 
                                       default=384) # 384
     parser.add_argument('--lr', type=float, 
                                 default=0.0001, 
-                                help='learning rate of others in SGD')
+                                help='learning rate of others in SGD') #学习率
     parser.add_argument('--momentum', type=float, 
                                       default=0.9, 
-                                      help='momentum of SGD')
+                                      help='momentum of SGD') #动量
     parser.add_argument('--seed', type=int, 
                                   default=668, 
-                                  help='manual seed')
+                                  help='manual seed') #随机种子
     parser.add_argument('--shot', type=int, 
                                   default=2, 
-                                  help='shot count')
+                                  help='shot count') #样本数(k-shot)
     parser.add_argument('--inferences', type=int, 
                                         default=10, 
-                                        help='number of rounds per inference')
+                                        help='number of rounds per inference') #每轮推断次数
     parser.add_argument('--stn_mode', type=str, 
                                       default='rotation_scale',
                                       help='[affine, translation, rotation, scale, shear, rotation_scale, translation_scale, rotation_translation, rotation_translation_scale]')
     args = parser.parse_args()
-    args.input_channel = 3
+    args.input_channel = 3 #输入通道数  
 
     if args.seed is None:
         args.seed = random.randint(1, 10000)
@@ -65,7 +66,7 @@ def main():
     if use_cuda:
         torch.cuda.manual_seed_all(args.seed)
 
-    args.prefix = time_file_str()
+    args.prefix = time_file_str() #日志文件
     args.save_dir = './logs_pcb/'
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
@@ -80,13 +81,13 @@ def main():
 
     # load model and dataset
     # 加载模型
-    STN = net(args, pretrained=False).to(device)
+    STN = net(args, pretrained=False).to(device) #经过迭代器
     ENC = Encoder().to(device)
     PRED = Predictor().to(device)
 
     # 第一种
     CKPT_name = f'logs_pcb/rotation_scale/{args.shot}/{args.obj}/{args.obj}_{args.shot}_rotation_scale_model.pt'
-    model_CKPT = torch.load(CKPT_name)
+    model_CKPT = torch.load(CKPT_name, map_location=device)
     STN.load_state_dict(model_CKPT['STN'])
     ENC.load_state_dict(model_CKPT['ENC'])
     PRED.load_state_dict(model_CKPT['PRED'])
@@ -101,8 +102,8 @@ def main():
     STN_optimizer = optim.SGD(STN.parameters(), lr=args.lr, momentum=args.momentum)
     ENC_optimizer = optim.SGD(ENC.parameters(), lr=args.lr, momentum=args.momentum)
     PRED_optimizer = optim.SGD(PRED.parameters(), lr=args.lr, momentum=args.momentum)
-    models = [STN, ENC, PRED]
-    optimizers = [STN_optimizer, ENC_optimizer, PRED_optimizer]
+    models = [STN, ENC, PRED]   #用于传递到下方的model
+    optimizers = [STN_optimizer, ENC_optimizer, PRED_optimizer] #用于传递到下方的optimizer
     init_lrs = [args.lr, args.lr, args.lr]
 
     # 加载数据集
@@ -129,7 +130,7 @@ def main():
         
         if epoch % 10 == 0:
             state = {'STN': STN.state_dict(), 'ENC': ENC.state_dict(), 'PRED':PRED.state_dict()}
-            torch.save(state, save_name)
+            torch.save(state, save_name)  # 每10轮保存一次模型
         
     log.close()
 
@@ -142,16 +143,16 @@ def train(models, epoch, train_loader, optimizers, log):
     ENC_optimizer = optimizers[1]
     PRED_optimizer = optimizers[2]
 
-    STN.train()
+    STN.train() #空间变换网络 --不改变shape
     ENC.train()
     PRED.train()
 
     total_losses = AverageMeter() # 初始化一个计算平均值的类
 
     for (query_img, support_img_list, _) in tqdm(train_loader):
-        STN_optimizer.zero_grad()
-        ENC_optimizer.zero_grad()
-        PRED_optimizer.zero_grad()
+        STN_optimizer.zero_grad() #清零梯度，
+        ENC_optimizer.zero_grad() #清零梯度，
+        PRED_optimizer.zero_grad() #清零梯度，
 
         # query_img: (类别/批次,Batch,3,224,224) support_img_list: (类别/批次,Batch,2,3,224,224)
         # query_img 含义是待检测的图片，support_img_list是支持集
